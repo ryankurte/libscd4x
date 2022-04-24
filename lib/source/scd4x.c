@@ -93,32 +93,36 @@ int scd4x_stop_periodic(struct scd4x_s *device) {
 // Note this does not wait / expects measurement to be ready, check with `scd4x_data_ready`
 int scd4x_get_measurement(struct scd4x_s *device, uint16_t *co2, int16_t *temp, uint16_t *humid) {
 	uint8_t data[9];
+	int32_t t;
 
 	int res = read_command(device, ReadMeasurement, data, sizeof(data));
 	if (res < 0) {
 		return res;
 	}
 
-	*co2 = (((uint32_t)data[0]) << 8 | (uint32_t)data[1]);
+	t = (((int16_t)data[0]) << 8 | (int16_t)data[1]);
 	if(data[2] != crc8(data + 0, 2)) {
 		printf("Read co2 CRC error (expected: 0x%02x actual: 0x%02x)\r\n",
 			data[2], crc8(data + 0, 2));
-		//return SCD4X_CRC_ERR;
+		return SCD4X_CRC_ERR;
 	}
+	*co2 = (uint16_t)t;
 
-	*temp = -45 + 175 * (((int32_t)data[3]) << 8 | (int32_t)data[4]) / (2 << 15);
+	t = ((int16_t)data[3] << 8) | (int16_t)data[4];
 	if(data[5] != crc8(data + 3, 2)) {
 		printf("Read temp CRC error (expected: 0x%02x actual: 0x%02x)\r\n",
 			data[5], crc8(data + 3, 2));
-		//return SCD4X_CRC_ERR;
+		return SCD4X_CRC_ERR;
 	}
+	*temp = -45 + 175 * t / (2 << 15);
 
-	*humid = 100 * (((uint32_t)data[6]) << 8 | (uint32_t)data[7]) / (2 << 15);
+	t = ((int16_t)data[6] << 8) | (int16_t)data[7];
 	if(data[8] != crc8(data + 6, 2)) {
 		printf("Read humid CRC error (expected: 0x%02x actual: 0x%02x)\r\n",
 			data[8], crc8(data + 6, 2));
-		//return SCD4X_CRC_ERR;
+		return SCD4X_CRC_ERR;
 	}
+	*humid = 100 * t / (2 << 15);
 
 	return SCD4X_OK;
 }
