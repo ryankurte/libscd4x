@@ -52,7 +52,7 @@ typedef enum  {
 int scd4x_init(struct scd4x_s *device, uint8_t address, const scd4x_driver_t *driver, void* driver_ctx);
 
 // Start periodic (~5s) sampling mode
-int scd4x_start_periodic(struct scd4x_s *device, uint16_t pressure_comp);
+int scd4x_start_periodic(struct scd4x_s *device);
 
 // Start low power periodic (~30s) sampling mode
 int scd4x_start_lp_periodic(struct scd4x_s *device);
@@ -60,11 +60,14 @@ int scd4x_start_lp_periodic(struct scd4x_s *device);
 // Stop periodic (~5s) measurements
 int scd4x_stop_periodic(struct scd4x_s *device);
 
+
 // Fetch an available measurement
 int scd4x_get_measurement(struct scd4x_s *device, uint16_t *co2, int16_t *temp, uint16_t *humid);
 
 // Check for data ready
 int scd4x_data_ready(struct scd4x_s *device);
+
+// Start a single-shot measurement (SCD41 only)
 
 
 // Set temperature offset to compensate for device self heating

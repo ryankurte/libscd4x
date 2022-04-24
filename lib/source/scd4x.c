@@ -66,7 +66,7 @@ int scd4x_close(struct scd4x_s *device) {
 	// Ensure device is stopped
 	int res = scd4x_stop_periodic(device);
 	if (res < 0) {
-		printf("SDC close, error stopping continuous mode\r\n");
+		printf("SCD4x close, error stopping continuous mode\r\n");
 	}
 
 	// Clear out driver and context
@@ -78,8 +78,10 @@ int scd4x_close(struct scd4x_s *device) {
 
 
 // Start continuous (~5s) sampling mode
-int scd4x_start_periodic(struct scd4x_s *device, uint16_t pressure_comp){
-	return write_command(device, StartPeriodicMeasurement, &pressure_comp);
+int scd4x_start_periodic(struct scd4x_s *device){
+	printf("SCD4x start periodic\r\n");
+
+	return write_command(device, StartPeriodicMeasurement, NULL);
 }
 
 // Stop continuous mode
@@ -88,6 +90,7 @@ int scd4x_stop_periodic(struct scd4x_s *device) {
 }
 
 // Read measurements from the SCD4x
+// Note this does not wait / expects measurement to be ready, check with `scd4x_data_ready`
 int scd4x_get_measurement(struct scd4x_s *device, uint16_t *co2, int16_t *temp, uint16_t *humid) {
 	uint8_t data[9];
 
@@ -96,19 +99,25 @@ int scd4x_get_measurement(struct scd4x_s *device, uint16_t *co2, int16_t *temp, 
 		return res;
 	}
 
-	*co2 = *(uint16_t*)(data + 0);
+	*co2 = (((uint32_t)data[0]) << 8 | (uint32_t)data[1]);
 	if(data[2] != crc8(data + 0, 2)) {
-		return SCD4X_CRC_ERR;
+		printf("Read co2 CRC error (expected: 0x%02x actual: 0x%02x)\r\n",
+			data[2], crc8(data + 0, 2));
+		//return SCD4X_CRC_ERR;
 	}
 
-	*temp = -45 + *(int16_t*)(data + 3) * 175 / (2 << 16);
+	*temp = -45 + 175 * (((int32_t)data[3]) << 8 | (int32_t)data[4]) / (2 << 15);
 	if(data[5] != crc8(data + 3, 2)) {
-		return SCD4X_CRC_ERR;
+		printf("Read temp CRC error (expected: 0x%02x actual: 0x%02x)\r\n",
+			data[5], crc8(data + 3, 2));
+		//return SCD4X_CRC_ERR;
 	}
 
-	*humid = 100 * *(int16_t*)(data + 5) / (2 << 16);
-	if(data[8] != crc8(data + 5, 2)) {
-		return SCD4X_CRC_ERR;
+	*humid = 100 * (((uint32_t)data[6]) << 8 | (uint32_t)data[7]) / (2 << 15);
+	if(data[8] != crc8(data + 6, 2)) {
+		printf("Read humid CRC error (expected: 0x%02x actual: 0x%02x)\r\n",
+			data[8], crc8(data + 6, 2));
+		//return SCD4X_CRC_ERR;
 	}
 
 	return SCD4X_OK;
