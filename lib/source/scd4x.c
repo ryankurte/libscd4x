@@ -130,7 +130,7 @@ int scd4x_get_measurement(struct scd4x_s *device, uint16_t *co2, int16_t *temp, 
 
 // Set temperature offset to correct temperature measurement for T/RH
 int scd4x_set_temp_offset(struct scd4x_s *device, int16_t temp_c) {
-	uint16_t t =  (int32_t)temp_c * (2 << 16) / 175;
+	uint16_t t =  (int32_t)temp_c * (2 << 15) / 175;
 
 	return write_command(device, SetTemperatureOffset, &t);
 }
